@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<title>Momskalkylator</title>
+
+<!-- PWA / iOS meta tags -->
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Moms">
+<meta name="theme-color" content="#0d0d0d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="Räkna ut momsen snabbt – 25%, 12% eller 6%">
+
+<!-- Inline SVG icon as data URI for apple-touch-icon -->
+
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230d0d0d'/%3E%3Ctext x='90' y='115' font-family='serif' font-size='80' text-anchor='middle' fill='%23c8f04a'%3E%25%3C/text%3E%3C/svg%3E">
+
+<!-- Inline Web App Manifest -->
+
+<script>
+  const manifestData = {
+    name: "Momskalkylator",
+    short_name: "Moms",
+    description: "Räkna ut momsen snabbt",
+    start_url: ".",
+    display: "standalone",
+    background_color: "#0d0d0d",
+    theme_color: "#0d0d0d",
+    orientation: "portrait",
+    icons: [{
+      src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='100' fill='%230d0d0d'/%3E%3Ctext x='256' y='340' font-family='serif' font-size='280' text-anchor='middle' fill='%23c8f04a'%3E%25%3C/text%3E%3C/svg%3E",
+      sizes: "512x512",
+      type: "image/svg+xml",
+      purpose: "any maskable"
+    }]
+  };
+  const blob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
+  const manifestURL = URL.createObjectURL(blob);
+  document.write('<link rel="manifest" href="' + manifestURL + '">');
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d0d;
+    --surface: #161616;
+    --border: #2a2a2a;
+    --accent: #c8f04a;
+    --text: #f0ede8;
+    --muted: #666;
+    --green: #4af09a;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  html, body {
+    height: 100%;
+    overscroll-behavior: none;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: calc(var(--safe-top) + 16px) 16px calc(var(--safe-bottom) + 16px);
+    background-image: radial-gradient(ellipse at 20% 50%, #1a2a0a 0%, transparent 60%),
+                      radial-gradient(ellipse at 80% 20%, #0a1a2a 0%, transparent 50%);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 440px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(200,240,74,0.05);
+    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .header {
+    padding: 24px 28px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+
+  .header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.8rem;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  .header h1 span { color: var(--accent); font-style: italic; }
+
+  .badge {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 100px;
+  }
+
+  .body { padding: 22px 28px; }
+
+  .mode-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 24px;
+  }
+
+  .mode-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.03em;
+    padding: 11px 8px;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.2s;
+    -webkit-appearance: none;
+  }
+
+  .mode-btn.active {
+    background: var(--surface);
+    color: var(--accent);
+    border: 1px solid rgba(200,240,74,0.2);
+  }
+
+  .rate-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .rate-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  .rate-btn {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 1rem;
+    font-weight: 500;
+    padding: 14px 8px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    -webkit-appearance: none;
+    active-scale: 0.95;
+  }
+
+  .rate-btn:active { transform: scale(0.95); }
+
+  .rate-btn small {
+    font-size: 0.58rem;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+
+  .rate-btn.active {
+    background: rgba(200,240,74,0.08);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .rate-btn.active small { color: rgba(200,240,74,0.5); }
+
+  .input-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .input-wrap {
+    position: relative;
+    margin-bottom: 20px;
+  }
+
+  .input-field {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 56px 16px 18px;
+    font-family: 'DM Mono', monospace;
+    font-size: 1.6rem;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .input-field:focus { border-color: rgba(200,240,74,0.4); }
+  .input-field::placeholder { color: var(--muted); }
+
+  /* Removes iOS inner shadow on inputs */
+  input[type="number"] { -webkit-appearance: none; }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+  .input-currency {
+    position: absolute;
+    right: 18px;
+    bottom: 19px;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .result-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    transition: all 0.3s;
+  }
+
+  .result-box.highlight {
+    background: rgba(200,240,74,0.06);
+    border-color: rgba(200,240,74,0.25);
+  }
+
+  .result-box .label {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+
+  .result-box .value {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .result-box.highlight .value { color: var(--accent); }
+
+  .result-box .sub {
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .result-full {
+    margin-top: 8px;
+    background: rgba(74,240,154,0.05);
+    border: 1px solid rgba(74,240,154,0.2);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .result-full .label {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(74,240,154,0.6);
+  }
+
+  .result-full .value {
+    font-size: 1.4rem;
+    font-weight: 500;
+    color: var(--green);
+  }
+
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+  .footer-note {
+    text-align: center;
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* Install banner */
+  .install-banner {
+    margin-top: 16px;
+    width: 100%;
+    max-width: 440px;
+    background: rgba(200,240,74,0.06);
+    border: 1px solid rgba(200,240,74,0.15);
+    border-radius: 14px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    animation: slideUp 0.6s 0.2s cubic-bezier(0.16,1,0.3,1) both;
+  }
+
+  .install-banner p {
+    font-size: 0.7rem;
+    color: rgba(200,240,74,0.7);
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+
+  .install-banner p strong { color: var(--accent); }
+
+  .install-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  @keyframes pop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.06); }
+    100% { transform: scale(1); }
+  }
+  .pop { animation: pop 0.2s ease; }
+</style>
+
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <h1>Moms<span>kalkyl</span></h1>
+    <span class="badge">Sverige</span>
+  </div>
+
+  <div class="body">
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="btn-exkl" onclick="setMode('exkl')">Lägg till moms</button>
+      <button class="mode-btn" id="btn-inkl" onclick="setMode('inkl')">Ta bort moms</button>
+    </div>
+
+```
+<div class="rate-label">Momssats</div>
+<div class="rate-grid">
+  <button class="rate-btn active" id="rate-25" onclick="setRate(25)">25%<small>Standard</small></button>
+  <button class="rate-btn" id="rate-12" onclick="setRate(12)">12%<small>Mat & hotell</small></button>
+  <button class="rate-btn" id="rate-6"  onclick="setRate(6)">6%<small>Böcker & tåg</small></button>
+</div>
+
+<div class="input-label" id="input-label">Belopp exkl. moms</div>
+<div class="input-wrap">
+  <input class="input-field" id="amount" type="number" inputmode="decimal" placeholder="0" min="0" oninput="calculate()">
+  <span class="input-currency">SEK</span>
+</div>
+
+<div class="result-grid">
+  <div class="result-box highlight">
+    <div class="label" id="moms-label">Moms (25%)</div>
+    <div class="value" id="moms-value">—</div>
+    <div class="sub">att betala</div>
+  </div>
+  <div class="result-box">
+    <div class="label">Exkl. moms</div>
+    <div class="value" id="base-value">—</div>
+    <div class="sub">nettopris</div>
+  </div>
+</div>
+
+<div class="result-full">
+  <div class="label">Totalt inkl. moms</div>
+  <div class="value" id="total-value">—</div>
+</div>
+
+<div class="divider"></div>
+<div class="footer-note">Momssatser enligt Skatteverket</div>
+```
+
+  </div>
+</div>
+
+<!-- iOS install hint (only shown in Safari, not standalone) -->
+
+<div class="install-banner" id="install-banner" style="display:none">
+  <p>Spara på hemskärmen: tryck på <strong>Dela</strong> ↑ och välj <strong>"Lägg till på hemskärmen"</strong></p>
+  <button class="install-close" onclick="document.getElementById('install-banner').style.display='none'">✕</button>
+</div>
+
+<script>
+  let mode = 'exkl', rate = 25;
+
+  // Show iOS install hint only in Safari browser (not already installed)
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone === true;
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  if (isIOS && !isStandalone && isSafari) {
+    document.getElementById('install-banner').style.display = 'flex';
+  }
+
+  function setMode(m) {
+    mode = m;
+    document.getElementById('btn-exkl').classList.toggle('active', m === 'exkl');
+    document.getElementById('btn-inkl').classList.toggle('active', m === 'inkl');
+    document.getElementById('input-label').textContent =
+      m === 'exkl' ? 'Belopp exkl. moms' : 'Belopp inkl. moms';
+    calculate();
+  }
+
+  function setRate(r) {
+    rate = r;
+    [25, 12, 6].forEach(v =>
+      document.getElementById('rate-' + v).classList.toggle('active', v === r));
+    document.getElementById('moms-label').textContent = 'Moms (' + r + '%)';
+    calculate();
+  }
+
+  function fmt(n) {
+    return isNaN(n) ? '—' :
+      n.toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' kr';
+  }
+
+  function pop(id) {
+    const el = document.getElementById(id);
+    el.classList.remove('pop');
+    void el.offsetWidth;
+    el.classList.add('pop');
+  }
+
+  function calculate() {
+    const raw = parseFloat(document.getElementById('amount').value);
+    if (!raw || raw <= 0) {
+      ['moms-value','base-value','total-value'].forEach(id =>
+        document.getElementById(id).textContent = '—');
+      return;
+    }
+    let base, moms, total;
+    if (mode === 'exkl') {
+      base = raw; moms = raw * (rate/100); total = raw + moms;
+    } else {
+      total = raw; base = raw / (1 + rate/100); moms = total - base;
+    }
+    document.getElementById('moms-value').textContent  = fmt(moms);
+    document.getElementById('base-value').textContent  = fmt(base);
+    document.getElementById('total-value').textContent = fmt(total);
+    pop('moms-value'); pop('total-value');
+  }
+
+  // Register inline service worker for offline support
+  if ('serviceWorker' in navigator) {
+    const sw = `
+      const CACHE = 'momskalkyl-v1';
+      self.addEventListener('install', e => {
+        e.waitUntil(caches.open(CACHE).then(c => c.addAll(['.'])));
+        self.skipWaiting();
+      });
+      self.addEventListener('activate', e => {
+        e.waitUntil(caches.keys().then(keys =>
+          Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))));
+        self.clients.claim();
+      });
+      self.addEventListener('fetch', e => {
+        e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+      });
+    `;
+    const blob = new Blob([sw], {type: 'application/javascript'});
+    navigator.serviceWorker.register(URL.createObjectURL(blob));
+  }
+</script>
+
+</body>
+</html>
